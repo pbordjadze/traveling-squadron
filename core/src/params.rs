@@ -111,13 +111,16 @@ impl Genome {
 pub struct Strategy {
     pub name: String,
     pub genome: Genome,
+    /// Lineage. Agents of the same family count as kin (the `kin` gene).
+    /// Presets are their own families; evolved genomes inherit their founder's.
+    pub family: usize,
 }
 
 /// The hand-written starting strategies. Step 2 evolves from these.
 pub fn presets() -> Vec<Strategy> {
     //                hung greed fear caut split shad shel bait gun  kin  wand risk tcare
-    let p = |name: &str, g: [f64; GENES]| Strategy { name: name.into(), genome: Genome(g).clamped() };
-    vec![
+    let p = |name: &str, g: [f64; GENES]| Strategy { name: name.into(), genome: Genome(g).clamped(), family: 0 };
+    let mut v = vec![
         p("grazer",    [1.0, 0.3, 1.2, 0.9, 0.0, 0.0, 0.4, 0.0, 0.0, 0.0, 0.3, 1.2, 0.8]),
         p("hunter",    [0.5, 1.2, 0.8, 0.5, 0.75, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 1.0, 0.4]),
         p("jackal",    [0.7, 0.8, 1.0, 0.7, 0.45, 1.0, 0.2, 0.0, 0.0, 0.0, 0.1, 1.05, 0.7]),
@@ -125,7 +128,11 @@ pub fn presets() -> Vec<Strategy> {
         p("trickster", [0.6, 0.6, 0.9, 0.6, 0.3, 0.0, 0.7, 1.0, 1.2, 0.0, 0.1, 1.1, 0.9]),
         p("clan",      [0.6, 1.0, 0.9, 0.6, 0.6, 0.2, 0.2, 0.0, 0.0, 1.0, 0.15, 1.0, 0.6]),
         p("drifter",   [0.4, 0.2, 0.4, 0.3, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 1.2, 1.3, 0.3]),
-    ]
+    ];
+    for (i, s) in v.iter_mut().enumerate() {
+        s.family = i;
+    }
+    v
 }
 
 // ---------------------------------------------------------------- intents

@@ -5,11 +5,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 cargo build --release -p motes-wasm --target wasm32-unknown-unknown
 cp target/wasm32-unknown-unknown/release/motes_wasm.wasm web/motes.wasm
+[ -f web/evolution-data.json ] || python3 scripts/build-evolution-data.py
 python3 - <<'PY'
-import base64
+import base64, os
 src = open("web/viewer.html").read()
 b64 = base64.b64encode(open("web/motes.wasm", "rb").read()).decode()
 out = src.replace("/*WASM_BASE64*/", b64)
+if os.path.exists("web/evolution-data.json"):
+    out = out.replace("/*EVOLUTION_JSON*/null", open("web/evolution-data.json").read())
 open("web/motes-viewer.html", "w").write("<!doctype html>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n" + out)
 PY
 echo "built web/motes-viewer.html ($(du -k web/motes-viewer.html | cut -f1) KB)"

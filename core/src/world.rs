@@ -71,6 +71,7 @@ pub struct Thorn {
 pub struct Player {
     pub id: usize,
     pub strat: usize,
+    pub family: usize,
     pub genome: Genome,
     pub rng: Rng,
     pub alive: bool,
@@ -107,6 +108,7 @@ pub enum EventKind {
     Shatter,   // a = cell owner that hit a thorn, b = shooter if a budded thorn (else usize::MAX)
     Bud,       // a = feeder
     Spawn,     // a = player
+    Eat,       // a = eater, b = victim: one piece of another agent eaten (kills also get a Kill)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -217,6 +219,7 @@ impl World {
             .map(|(id, &s)| Player {
                 id,
                 strat: s,
+                family: strategies[s].family,
                 genome: strategies[s].genome.clone(),
                 rng: rng.fork(id as u64 + 1),
                 alive: false,
@@ -296,6 +299,7 @@ impl World {
             Command::SetStrategy { player, strat } => {
                 if player < self.players.len() && strat < self.strategies.len() {
                     self.players[player].strat = strat;
+                    self.players[player].family = self.strategies[strat].family;
                     self.players[player].genome = self.strategies[strat].genome.clone();
                 }
             }
@@ -746,6 +750,8 @@ impl World {
                     let (es, vs) = (self.players[eater].strat, self.players[victim].strat);
                     self.stats.mass_eaten[es][vs] += m;
                     self.players[victim].last_hit_by = Some(eater);
+                    let (ex, ey) = (self.cells[j].x, self.cells[j].y);
+                    self.events.push(Event { tick: t, kind: EventKind::Eat, a: eater, b: victim, mass: m, x: ex, y: ey });
                     // was that the victim's last piece?
                     let left = self.cells.iter().any(|c| c.owner == victim && c.mass > 0.0);
                     if !left {

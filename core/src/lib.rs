@@ -2,6 +2,7 @@
 //! See README.md at the repository root.
 
 pub mod brain;
+pub mod moments;
 pub mod params;
 pub mod rng;
 pub mod world;

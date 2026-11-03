@@ -65,6 +65,54 @@ details summary { cursor: pointer; font: 600 10px var(--mono); letter-spacing: .
   #stage { height: 72vh; flex: none; }
   aside { width: auto; border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 }
+
+/* ---------- evolution view: a lab notebook laid over the console */
+#evo { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; display: none; }
+#evo.open { display: block; }
+#evo .wrap { max-width: 1180px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-left, 0px)) 80px; }
+#evo header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+#evo h1 { font: 600 20px var(--ui); margin: 0; letter-spacing: -.01em; }
+#evo h1 small { font: 400 12px var(--mono); color: var(--dim); margin-left: 10px; letter-spacing: 0; }
+#evo h3 { font: 600 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 34px 0 4px; }
+#evo .lede { color: var(--dim); font-size: 13px; max-width: 760px; margin: 0 0 12px; }
+#evo .lede b { color: var(--fg); font-weight: 600; }
+.runs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 4px; }
+.runs button { text-align: left; padding: 8px 12px; min-width: 150px; }
+.runs button b { display: block; font: 600 13px var(--ui); }
+.runs button span { font-size: 11px; color: var(--dim); }
+.runs button.on span { color: #2a3313; }
+.findings { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; font-size: 13.5px; line-height: 1.55; }
+.findings p { margin: 0 0 8px; } .findings ol, .findings ul { margin: 4px 0 8px; padding-left: 20px; } .findings li { margin-bottom: 5px; }
+.findings b { color: var(--accent); font-weight: 600; }
+.findings table { border-collapse: collapse; font: 12px var(--mono); margin: 8px 0; font-variant-numeric: tabular-nums; }
+.findings td, .findings th { border-bottom: 1px solid var(--line); padding: 4px 10px 4px 0; text-align: left; }
+.findings th { color: var(--dim); font-weight: 400; }
+#lineage-box { position: relative; background: var(--stage); border: 1px solid var(--line); border-radius: 6px; }
+#lineage { width: 100%; height: 360px; display: block; cursor: pointer; }
+#tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; font-size: 12px; max-width: 280px; display: none; z-index: 2; box-shadow: 0 6px 20px #0008; }
+#tip b { font-weight: 600; } #tip .g { font: 11px var(--mono); color: var(--dim); }
+.lin-ctl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; font-size: 12px; color: var(--dim); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.sm { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px 6px; }
+.sm .t { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
+.sm .t b { font-weight: 600; } .sm .t span { font: 11px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sm .d { font-size: 10.5px; color: var(--dim); min-height: 14px; }
+.sm canvas { width: 100%; height: 70px; display: block; margin-top: 4px; }
+.sm.up { border-color: #4d5a2a; } .sm.down { border-color: #4a2e2a; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+.chips button { font-size: 11.5px; padding: 3px 9px; border-radius: 12px; }
+.moments { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.mo { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.mo .k { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--dim); }
+.mo .k em { font-style: normal; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; }
+.mo p { margin: 0; font-size: 12.5px; }
+.mo button { align-self: flex-start; }
+.tag { font: 10px var(--mono); padding: 1px 6px; border-radius: 3px; background: #2b3a1b; color: var(--accent); margin-left: 6px; }
+#banner { position: absolute; left: 50%; transform: translateX(-50%); top: 52px; max-width: min(720px, calc(100% - 24px)); background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid #4d5a2a; border-radius: 6px; padding: 8px 12px; font-size: 12.5px; display: none; gap: 10px; align-items: center; z-index: 5; }
+#banner.on { display: flex; }
+#banner .bt { flex: 1; } #banner .bt small { display: block; font: 10.5px var(--mono); color: var(--dim); }
+@media (max-width: 760px) { #lineage { height: 340px; } .runs button { min-width: 0; flex: 1 1 40%; } #banner { top: 96px; } }
 </style>
 
 <div id="app">
@@ -85,8 +133,10 @@ details summary { cursor: pointer; font: 600 10px var(--mono); letter-spacing: .
       <label class="muted">agents <input id="np" type="number" value="42" min="2" max="200"></label>
       <button id="new">New game</button>
       <button id="fit">Whole arena</button>
+      <button id="evo-open" class="on">Evolution</button>
     </div>
     <div id="hint"></div>
+    <div id="banner"><div class="bt" id="banner-t"></div><button id="banner-replay">Replay</button><button id="banner-x" aria-label="Close">×</button></div>
     <div id="bar">
       <button id="play" class="on" aria-label="Play or pause (space)">Pause</button>
       <select id="speed" aria-label="Speed">
@@ -108,9 +158,44 @@ details summary { cursor: pointer; font: 600 10px var(--mono); letter-spacing: .
   </aside>
 </div>
 
+
+<div id="evo" role="dialog" aria-label="Evolution">
+  <div class="wrap">
+    <header><h1>Evolution <small id="evo-sub"></small></h1><button id="evo-close">Back to the arena</button></header>
+    <p class="lede">Each strategy is a genome of 13 drive weights. A population of 42 genomes plays together in seeded games; the best half survive and keep being re-tested, the rest of the next generation are their mutated children. Nobody is told what to do. Pick a run:</p>
+    <div class="runs" id="evo-runs"></div>
+    <h3>What it found</h3>
+    <div class="findings" id="evo-findings"></div>
+    <h3>Lineage</h3>
+    <p class="lede">Height = share of the population. Colour = founder lineage; each band is a kin clan (a heritable tag: one birth in ten starts a new clan, nested inside the one it split from), so you can watch dynasties rise and get displaced. Hover a band for what makes that clan different; click it to trace its best genome back to its founder.</p>
+    <div class="lin-ctl"><span id="lin-legend"></span></div>
+    <div id="lineage-box"><canvas id="lineage" aria-label="Muller plot of kin clans over generations"></canvas><div id="tip"></div></div>
+    <p class="lede" id="strip-cap" style="margin-top:14px"></p>
+    <div style="background:var(--stage);border:1px solid var(--line);border-radius:6px"><canvas id="strip" style="width:100%;height:200px;display:block" aria-label="Genome along the line of descent"></canvas></div>
+    <h3>Which traits rise</h3>
+    <p class="lede">Population mean (line) and the middle 80% (band) of each gene, generation by generation, on the gene's full range. Outlined green if it ended well above where it started, red if well below.</p>
+    <div class="grid" id="evo-traits"></div>
+    <h3>Behaviour and politics</h3>
+    <p class="lede">What the population actually did, per game: the named political moments, how much of the time agents spent shadowing or sheltering, and whether kin really spare kin (kin share of all cell-eating vs. what blind eating would give).</p>
+    <div class="grid" id="evo-behav"></div>
+    <h3>Signature moments</h3>
+    <p class="lede">Replays from the run itself. <b>Watch</b> loads that generation's 42 genomes into the arena on the same seed, so the game replays exactly, and follows the protagonist (white ring); the other party gets an orange dashed ring.</p>
+    <div class="chips" id="evo-chips"></div>
+    <div class="moments" id="evo-moments"></div>
+    <h3>Face-off: evolved champions against the hand-written presets</h3>
+    <div class="findings" id="evo-faceoff"></div>
+  </div>
+</div>
+
 <script>
+const EVO = /*EVOLUTION_JSON*/null;
 const WASM_B64 = "/*WASM_BASE64*/";
 const STRAT_COLORS = ["#7fc8a9", "#e8705f", "#d9a441", "#6fa8dc", "#b48ee0", "#e58fc0", "#9aa3ad"];
+const FAMILY_NAMES = ["grazer", "hunter", "jackal", "hermit", "trickster", "clan", "drifter"];
+let founder = null;      // custom roster: strategy index -> founder family (for colour); null = presets
+let marks = [];          // players to ring (the other party in a replayed moment)
+const groupOf = (st) => (founder ? founder[st] : st);
+const colorOf = (st) => STRAT_COLORS[groupOf(st) % STRAT_COLORS.length];
 const INTENT_COLORS = ["#7fc8a9", "#e8705f", "#f2d16b", "#d9a441", "#62d3e0", "#b48ee0", "#ffffff", "#5d6a73", "#ff3b2f"];
 const $ = (id) => document.getElementById(id);
 let X, mem, meta;
@@ -144,9 +229,14 @@ function parse() {
 }
 
 function newGame(seed, np) {
-  X.init(seed, np); follow = -1; userZoom = false;
+  X.init(seed, np); follow = -1; userZoom = false; founder = null; marks = []; inspBuiltFor = -2; hideBanner();
+  meta = JSON.parse(text(X.meta())); buildLegend();
   try { history.replaceState(null, "", "#seed-" + seed); } catch (e) {}
   buildRules(); parse(); fit();
+}
+function buildLegend() {
+  const groups = founder ? [...new Set(founder)].sort((a, c) => a - c) : meta.strategies.map((_, k) => k);
+  $("legend").innerHTML = groups.map((k) => `<span><i class="dot" style="background:${STRAT_COLORS[k % 7]}"></i>${founder ? FAMILY_NAMES[k] + " line" : meta.strategies[k].name}</span>`).join("");
 }
 
 // ---------- camera
@@ -201,11 +291,12 @@ function draw() {
   for (const i of order) {
     const q = F.cells + i * 5, x = b[q], y = b[q + 1], rr = b[q + 2], owner = b[q + 3], st = b[q + 4];
     if (!thornsDone && rr > thornR) drawThorns();
-    const col = STRAT_COLORS[st % STRAT_COLORS.length];
+    const col = colorOf(st);
     ctx.beginPath(); ctx.arc(x, y, rr, 0, 7);
     ctx.fillStyle = col + "cc"; ctx.fill();
     ctx.lineWidth = Math.max(1.5 / s, rr * 0.07); ctx.strokeStyle = col; ctx.stroke();
     if (owner === follow) { ctx.lineWidth = 2.5 / s; ctx.strokeStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x, y, rr + 5 / s, 0, 7); ctx.stroke(); }
+    else if (marks.includes(owner)) { ctx.lineWidth = 2.5 / s; ctx.strokeStyle = "#ff8a5c"; ctx.setLineDash([8 / s, 6 / s]); ctx.beginPath(); ctx.arc(x, y, rr + 6 / s, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
     if (rr * s > 13) {
       ctx.fillStyle = "#0b1115"; ctx.font = `600 ${Math.max(10 / s, rr * 0.38)}px "Martian Mono", monospace`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(owner, x, y);
@@ -239,16 +330,18 @@ function drawShare() {
   const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
   const ns = F.nstrat, rows = F.ns, b = F.b;
   if (rows < 2) return;
+  const ng = founder ? 7 : ns;
   const cur = Math.min(rows - 1, Math.floor(F.tick / meta.share_every));
   const step = Math.max(1, Math.floor(rows / w));
   const xs = (k) => (k / (rows - 1)) * w;
   const base = new Float32Array(Math.ceil(rows / step) + 1);
-  for (let s = 0; s < ns; s++) {
+  for (let s = 0; s < ng; s++) {
     g.beginPath(); const top = [];
     let j = 0;
     for (let k = 0; k < rows; k += step, j++) {
-      let tot = 0; for (let u = 0; u < ns; u++) tot += b[F.share + k * ns + u];
-      const v = tot > 0 ? b[F.share + k * ns + s] / tot : 0;
+      let tot = 0, mine = 0;
+      for (let u = 0; u < ns; u++) { const m = b[F.share + k * ns + u]; tot += m; if (groupOf(u) === s) mine += m; }
+      const v = tot > 0 ? mine / tot : 0;
       top.push([xs(k), base[j], base[j] + v]); base[j] += v;
     }
     top.forEach(([x, , y1], i) => i ? g.lineTo(x, h - y1 * h) : g.moveTo(x, h - y1 * h));
@@ -265,7 +358,7 @@ function panel() {
   const alive = []; for (let i = 0; i < F.na; i++) { const p = F.P(i); if (p.alive) alive.push([i, p]); }
   alive.sort((a, c) => c[1].mass - a[1].mass);
   $("ranks").innerHTML = alive.slice(0, 10).map(([i, p], k) =>
-    `<li data-p="${i}" class="${i === follow ? "sel" : ""}"><span class="n">${k + 1}</span><span class="dot" style="background:${STRAT_COLORS[p.strat]}"></span>` +
+    `<li data-p="${i}" class="${i === follow ? "sel" : ""}"><span class="n">${k + 1}</span><span class="dot" style="background:${colorOf(p.strat)}"></span>` +
     `<span>${meta.strategies[p.strat].name} #${i}</span><span class="i">${meta.intents[p.intent]}</span><span class="m">${Math.round(p.mass)}</span></li>`).join("");
   // feed
   const lines_ = text(X.feed(40)).split("\n").filter(Boolean);
@@ -292,7 +385,7 @@ function inspector() {
     meta.genes.forEach((g, k) => { $("g-" + k).oninput = (e) => { X.cmd_set_gene(follow, k, +e.target.value); X.step(1); $("gv-" + k).textContent = (+e.target.value).toFixed(2); }; });
     refreshGenes(true);
   }
-  $("i-dot").style.background = STRAT_COLORS[p.strat];
+  $("i-dot").style.background = colorOf(p.strat);
   $("i-name").textContent = `${meta.strategies[p.strat].name} #${follow}`;
   $("i-intent").textContent = p.alive ? meta.intents[p.intent] : "waiting to respawn";
   $("i-intent").style.color = INTENT_COLORS[p.intent];
@@ -382,15 +475,342 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// ================================================================ evolution view
+const IX = { id: 0, pa: 1, pb: 2, fam: 3, clan: 4, born: 5, surv: 6, fit: 7, cum: 8, evals: 9, power: 10, top: 11, kills: 12, deaths: 13, shadow: 14, posted: 15, kin: 16, gene: 17, mom: 30, intent: 39 };
+let evoData = EVO, evoRun = null, linSel = -1, linLayout = null, momentFilter = "firsts";
+const clanColor = (c) => `hsl(${(c * 137.508) % 360}, 52%, 64%)`;
+const indName = (run, ind) => `${run.family_names[ind[IX.fam]]}-${ind[IX.id]}`;
+
+async function evoInit(startHash = "") {
+  if (!evoData) { try { evoData = await (await fetch("evolution-data.json")).json(); } catch (e) { evoData = null; } }
+  if (!evoData || !evoData.runs.length) { $("evo-open").style.display = "none"; return; }
+  IX.intent = IX.mom + evoData.runs[0].moment_names.length;
+  $("evo-open").onclick = () => openEvo(true);
+  $("evo-close").onclick = () => openEvo(false);
+  $("evo-runs").innerHTML = evoData.runs.map((r, k) => `<button data-k="${k}"><b>${r.title}</b><span>${r.blurb}</span></button>`).join("");
+  $("evo-runs").onclick = (e) => { const b = e.target.closest("button"); if (b) selectRun(+b.dataset.k); };
+  $("evo-findings").innerHTML = evoData.findings || "<p class='muted'>No write-up yet.</p>";
+  $("evo-faceoff").innerHTML = evoData.faceoff || "<p class='muted'>No face-off yet.</p>";
+  $("banner-x").onclick = hideBanner;
+  const lc = $("lineage");
+  lc.addEventListener("mousemove", (e) => linHover(e));
+  lc.addEventListener("mouseleave", () => { $("tip").style.display = "none"; });
+  lc.addEventListener("click", (e) => { const h = linHit(e); linSel = h ? h.ind[IX.id] : championId(evoRun); drawLineage(); });
+  addEventListener("resize", () => { if ($("evo").classList.contains("open")) renderEvo(); });
+  selectRun(0, false);
+  const q = new URLSearchParams(startHash.slice(1));
+  if (q.get("run")) {
+    const k = evoData.runs.findIndex((r) => r.name === q.get("run"));
+    if (k >= 0) {
+      const run = evoData.runs[k], m = { gen: +q.get("gen"), game: +q.get("game"), tick: +q.get("t") || 0, a: +(q.get("a") ?? -1), b: +(q.get("b") ?? -1), text: "" };
+      const known = run.M.find((x) => x.gen === m.gen && x.game === m.game && x.tick === m.tick && x.a === m.a);
+      selectRun(k, false); watch(run, known || m);
+    }
+  } else if (q.has("evolution")) openEvo(true);
+}
+function openEvo(on) { $("evo").classList.toggle("open", on); if (on) { renderEvo(); playing && togglePlay(); } }
+function selectRun(k, render = true) {
+  evoRun = evoData.runs[k]; linSel = -1; linLayout = null;
+  [...$("evo-runs").children].forEach((b, j) => b.classList.toggle("on", j === k));
+  const r = evoRun;
+  $("evo-sub").textContent = `${r.gens} generations × ${r.games} games × ${Math.round(r.ticks / meta.tps / 60)} min · fitness: ${r.fitness === "power" ? "time-averaged mass" : "time as the largest"}`;
+  if (render || $("evo").classList.contains("open")) renderEvo();
+}
+function renderEvo() { drawLineage(); drawTraits(); drawBehaviour(); drawMoments(); }
+
+function sizeCanvas(c, hCss) {
+  const d = devicePixelRatio || 1, w = c.clientWidth, h = hCss || c.clientHeight;
+  c.width = w * d; c.height = h * d; const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); return [g, w, h];
+}
+
+// ---- lineage: a Muller plot of kin clans (a clan is a heritable tag; 1 birth in 10 founds a new one,
+// so clans nest inside the clans they split from) and the champion's line of descent as a gene strip
+function clanTree(run) {
+  const parentClan = new Map(), famOf = new Map(), byId = new Map(), firstGen = new Map();
+  run.G.forEach((g, gi) => g.I.forEach((i) => { if (!byId.has(i[IX.id])) byId.set(i[IX.id], i); }));
+  run.G.forEach((g, gi) => g.I.forEach((i) => {
+    const c = i[IX.clan];
+    if (!famOf.has(c)) { famOf.set(c, i[IX.fam]); firstGen.set(c, gi); const p = byId.get(i[IX.pa]); parentClan.set(c, p && p[IX.clan] !== c ? p[IX.clan] : -1); }
+  }));
+  const kids = new Map(); for (const [c, p] of parentClan) { if (!kids.has(p)) kids.set(p, []); kids.get(p).push(c); }
+  for (const v of kids.values()) v.sort((a, b) => firstGen.get(a) - firstGen.get(b) || a - b);
+  // colour: founder hue, nudged per generation of clan splitting
+  const depth = new Map(), color = new Map();
+  const walk = (c, d, k) => { depth.set(c, d); const base = d === 0 ? STRAT_COLORS[famOf.get(c)] : null;
+    color.set(c, base || shade(color.get(parentClan.get(c)), k)); (kids.get(c) || []).forEach((x, j) => walk(x, d + 1, j)); };
+  (kids.get(-1) || []).forEach((c, j) => walk(c, 0, j));
+  return { parentClan, kids, famOf, byId, color, firstGen };
+}
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = ((k * 0.37) % 1) - 0.5, f = 1 + t * 0.55; // alternate lighter / darker children
+  r = Math.max(0, Math.min(255, Math.round(r * f + (t > 0 ? 18 : -6)))); g = Math.max(0, Math.min(255, Math.round(g * f))); b = Math.max(0, Math.min(255, Math.round(b * f + (t < 0 ? 22 : 0))));
+  return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+function mullerLayout(run, T) {
+  // per generation: [clan, y0, y1] bands, each clan's band wrapped around its descendants
+  const cols = run.G.map((g) => {
+    const cnt = new Map(); g.I.forEach((i) => cnt.set(i[IX.clan], (cnt.get(i[IX.clan]) || 0) + 1));
+    const sub = new Map(); // clan -> total incl. descendants
+    const total = (c) => { if (sub.has(c)) return sub.get(c); let t = cnt.get(c) || 0; for (const k of T.kids.get(c) || []) t += total(k); sub.set(c, t); return t; };
+    const bands = []; let y = 0;
+    const lay = (c) => { const tot = total(c); if (!tot) return; const own = cnt.get(c) || 0; const y0 = y; y += own / 2;
+      for (const k of T.kids.get(c) || []) lay(k); y += own / 2; bands.push([c, y0, y, own]); };
+    for (const c of T.kids.get(-1) || []) lay(c);
+    return bands;
+  });
+  return cols;
+}
+function linGeom() {
+  const c = $("lineage"), w = c.clientWidth, h = c.clientHeight, n = evoRun.G.length;
+  const L = 34, R = 10, T = 10, B = 22;
+  return { w, h, L, R, T, B, x: (gi) => L + Math.sqrt(gi / Math.max(1, n - 1)) * (w - L - R), y: (v) => T + (v / evoRun.pop) * (h - T - B) };
+}
+function drawLineage() {
+  if (!evoRun) return;
+  const run = evoRun, c = $("lineage");
+  if (!linLayout) { const T = clanTree(run); linLayout = { T, cols: mullerLayout(run, T) }; if (linSel < 0) linSel = championId(run); }
+  const [g, w, h] = sizeCanvas(c), G = linGeom(), { T, cols } = linLayout;
+  g.clearRect(0, 0, w, h);
+  // each clan: a polygon over the generations it is alive (bands are nested, so draw outer first)
+  const spans = new Map();
+  cols.forEach((bands, gi) => bands.forEach(([cl, y0, y1, own]) => { if (!spans.has(cl)) spans.set(cl, []); spans.get(cl).push([gi, y0, y1, own]); }));
+  const order = [...spans.keys()].sort((a, b) => (T.firstGen.get(a) - T.firstGen.get(b)) || a - b);
+  const selClan = linSel >= 0 && T.byId.get(linSel) ? T.byId.get(linSel)[IX.clan] : -1;
+  for (const cl of order) {
+    const pts = spans.get(cl);
+    // split into contiguous runs of generations
+    let runStart = 0;
+    for (let k = 1; k <= pts.length; k++) {
+      if (k === pts.length || pts[k][0] !== pts[k - 1][0] + 1) {
+        const seg = pts.slice(runStart, k); runStart = k;
+        g.beginPath();
+        seg.forEach(([gi, y0], j) => j ? g.lineTo(G.x(gi), G.y(y0)) : g.moveTo(G.x(gi), G.y(y0)));
+        for (let j = seg.length - 1; j >= 0; j--) g.lineTo(G.x(seg[j][0]), G.y(seg[j][2]));
+        if (seg.length === 1) { const [gi, y0, y1] = seg[0]; g.rect(G.x(gi) - 1.5, G.y(y0), 3, G.y(y1) - G.y(y0)); }
+        g.closePath(); g.fillStyle = T.color.get(cl) || "#888"; g.globalAlpha = selClan < 0 || selClan === cl ? 0.92 : 0.55; g.fill();
+        g.globalAlpha = 1; g.strokeStyle = "#091014"; g.lineWidth = 0.5; g.stroke();
+      }
+    }
+  }
+  // axis
+  g.fillStyle = "#7d8c96"; g.font = "10px 'Martian Mono', monospace"; g.textAlign = "center";
+  for (const gi of sqrtTicks(run.G.length)) g.fillText(gi, G.x(gi), h - 6);
+  g.textAlign = "left"; g.fillText("gen", 2, h - 6);
+  // champion's (or the selected genome's) line of descent, drawn through the plot
+  const line = ancestry(run, linSel);
+  if (line.length) {
+    g.strokeStyle = "#ffffff"; g.lineWidth = 1.6; g.setLineDash([4, 3]); g.beginPath();
+    let started = false;
+    for (const { gi, ind } of line) {
+      const band = cols[gi].find((b) => b[0] === ind[IX.clan]); if (!band) continue;
+      const yy = G.y((band[1] + band[2]) / 2);
+      started ? g.lineTo(G.x(gi), yy) : g.moveTo(G.x(gi), yy); started = true;
+    }
+    g.stroke(); g.setLineDash([]);
+  }
+  $("lin-legend").innerHTML = [...new Set(run.G[0].I.map((i) => i[IX.fam]))].map((f) => `<span style="margin-right:10px"><i class="dot" style="display:inline-block;vertical-align:middle;margin-right:4px;background:${STRAT_COLORS[f]}"></i>${run.family_names[f]}</span>`).join("") +
+    `<span>· generations on a √ scale, so the early ones get more room · dashed white: line of descent of ${linSel >= 0 && T.byId.get(linSel) ? indName(run, T.byId.get(linSel)) : "—"}</span>`;
+  drawStrip();
+}
+function sqrtTicks(n) { return [0, 1, 3, 5, 10, 20, 35, 50, 75, 100, 125, 150, 200].filter((v) => v < n); }
+function championId(run) {
+  const last = run.G[run.G.length - 1].I.filter((i) => i[IX.evals] >= run.games * 3);
+  const pool = last.length ? last : run.G[run.G.length - 1].I;
+  return pool.reduce((a, b) => (b[IX.cum] > a[IX.cum] ? b : a))[IX.id];
+}
+// [{gi, ind}] for every generation, following the genome back to its founder through its parents
+function ancestry(run, id) {
+  const out = []; let cur = id;
+  for (let gi = run.G.length - 1; gi >= 0 && cur >= 0; gi--) {
+    const ind = run.G[gi].I.find((i) => i[IX.id] === cur);
+    if (!ind) continue;
+    out.push({ gi, ind });
+    if (ind[IX.born] === gi) cur = ind[IX.pa];
+  }
+  return out.reverse();
+}
+function drawStrip() {
+  const run = evoRun, c = $("strip"), line = ancestry(run, linSel), gn = run.gene_names;
+  const [g, w, h] = sizeCanvas(c), L = 86, R = 10, T = 4, B = 18, n = run.G.length;
+  g.clearRect(0, 0, w, h);
+  const rowH = (h - T - B) / gn.length, x = (gi) => L + Math.sqrt(gi / Math.max(1, n - 1)) * (w - L - R);
+  const x0 = (gi) => x(Math.max(0, gi - 0.5)), x1 = (gi) => x(Math.min(n - 1, gi + 0.5)) + 0.4;
+  g.font = "10.5px 'Instrument Sans', sans-serif"; g.textAlign = "right"; g.textBaseline = "middle";
+  gn.forEach((name, k) => { g.fillStyle = "#7d8c96"; g.fillText(name, L - 8, T + (k + 0.5) * rowH); });
+  for (const { gi, ind } of line) {
+    gn.forEach((_, k) => {
+      const d = meta.genes[k] || { min: 0, max: 2 }, v = (ind[IX.gene + k] - d.min) / (d.max - d.min);
+      g.fillStyle = `hsl(${78 - 10 * v}, ${20 + 50 * v}%, ${10 + 52 * v}%)`;
+      g.fillRect(x0(gi), T + k * rowH + 0.5, Math.max(0.8, x1(gi) - x0(gi)), rowH - 1);
+    });
+    if (ind[IX.born] === gi && gi > 0) { g.fillStyle = "#ffffff55"; g.fillRect(x(gi) - 0.5, h - B + 2, 1, 4); }
+  }
+  g.textAlign = "center"; g.textBaseline = "alphabetic"; g.fillStyle = "#7d8c96"; g.font = "10px 'Martian Mono', monospace";
+  for (const gi of sqrtTicks(n)) g.fillText(gi, x(gi), h - 4);
+  const sel = line.length ? line[line.length - 1].ind : null;
+  $("strip-cap").innerHTML = sel ? `Genome of <b>${indName(run, sel)}</b> and each of its ancestors, generation by generation (bright = high). Ticks under the strip mark births: ${new Set(line.map((l) => l.ind[IX.id])).size} genomes from founder to here.` : "";
+}
+function linHit(e) {
+  if (!linLayout) return null;
+  const r = $("lineage").getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, G = linGeom(), n = evoRun.G.length;
+  const fx = (mx - G.L) / (G.w - G.L - G.R);
+  const gi = Math.round(Math.max(0, fx) ** 2 * (n - 1) * Math.sign(fx));
+  if (gi < 0 || gi >= n) return null;
+  const v = ((my - G.T) / (G.h - G.T - G.B)) * evoRun.pop;
+  // innermost band containing v
+  let best = null;
+  for (const b of linLayout.cols[gi]) if (v >= b[1] && v <= b[2] && (!best || b[2] - b[1] < best[2] - best[1])) best = b;
+  if (!best) return null;
+  const members = evoRun.G[gi].I.filter((i) => i[IX.clan] === best[0]);
+  if (!members.length) return null;
+  const top = members.reduce((a, b) => (b[IX.fit] > a[IX.fit] ? b : a));
+  return { gi, clan: best[0], members, ind: top, x: mx, y: my };
+}
+function linHover(e) {
+  const h = linHit(e), tip = $("tip");
+  if (!h) { tip.style.display = "none"; return; }
+  const run = evoRun, gn = run.gene_names, i = h.ind;
+  const g0 = run.G[0].I, mean0 = gn.map((_, k) => g0.reduce((a, x) => a + x[IX.gene + k], 0) / g0.length);
+  const cm = gn.map((_, k) => h.members.reduce((a, x) => a + x[IX.gene + k], 0) / h.members.length);
+  const devs = gn.map((n, k) => [n, cm[k], cm[k] - mean0[k]]).sort((a, c) => Math.abs(c[2]) - Math.abs(a[2])).slice(0, 4);
+  const pc = linLayout.T.parentClan.get(h.clan);
+  tip.innerHTML = `<b>clan ${h.clan}</b> <span class="g">${run.family_names[linLayout.T.famOf.get(h.clan)]} line${pc >= 0 ? ` · split from clan ${pc} in gen ${linLayout.T.firstGen.get(h.clan)}` : " · founder"}</span><br>
+    <span class="g">gen ${h.gi}: ${h.members.length} of ${run.pop} genomes · best here ${indName(run, i)} (fitness ${i[IX.fit].toFixed(2)})</span><br>
+    furthest from the founders: ${devs.map(([n, v, d]) => `${n} ${v.toFixed(2)} <span class="g">(${d >= 0 ? "+" : ""}${d.toFixed(2)})</span>`).join(", ")}<br><span class="g">click to trace its best genome's ancestry</span>`;
+  tip.style.display = "block";
+  const bw = $("lineage-box").clientWidth;
+  tip.style.left = Math.max(0, Math.min(bw - 290, h.x + 12)) + "px"; tip.style.top = (h.y + 14) + "px";
+}
+
+// ---- small multiples
+function spark(c, series, lo, hi, opt = {}) {
+  const [g, w, h] = sizeCanvas(c, 70), n = series[0].vals.length, pad = 2;
+  const X_ = (k) => pad + (k / Math.max(1, n - 1)) * (w - 2 * pad), Y_ = (v) => h - 3 - ((v - lo) / Math.max(1e-9, hi - lo)) * (h - 8);
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = "#22303a"; g.lineWidth = 1; g.beginPath(); g.moveTo(0, h - 3); g.lineTo(w, h - 3); g.stroke();
+  for (const s of series) {
+    if (s.band) {
+      g.fillStyle = s.color; g.globalAlpha = 0.16; g.beginPath();
+      s.band.forEach(([a], k) => k ? g.lineTo(X_(k), Y_(a)) : g.moveTo(X_(k), Y_(a)));
+      for (let k = n - 1; k >= 0; k--) g.lineTo(X_(k), Y_(s.band[k][1]));
+      g.closePath(); g.fill(); g.globalAlpha = 1;
+    }
+    let vals = s.vals;
+    if (opt.smooth && n > 20) {
+      g.strokeStyle = s.color; g.globalAlpha = 0.25; g.lineWidth = 1;
+      g.beginPath(); vals.forEach((v, k) => k ? g.lineTo(X_(k), Y_(v)) : g.moveTo(X_(k), Y_(v))); g.stroke(); g.globalAlpha = 1;
+      vals = vals.map((_, k) => { const a = Math.max(0, k - 3), b = Math.min(n, k + 4); let t = 0; for (let j = a; j < b; j++) t += s.vals[j]; return t / (b - a); });
+    }
+    g.strokeStyle = s.color; g.lineWidth = s.width || 1.6; if (s.dash) g.setLineDash([3, 3]);
+    g.beginPath(); vals.forEach((v, k) => k ? g.lineTo(X_(k), Y_(v)) : g.moveTo(X_(k), Y_(v))); g.stroke(); g.setLineDash([]);
+  }
+}
+function quant(a, q) { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; }
+function drawTraits() {
+  const run = evoRun, el = $("evo-traits");
+  el.innerHTML = run.gene_names.map((n, k) => `<div class="sm" id="tr-${k}"><div class="t"><b>${n}</b><span id="trv-${k}"></span></div><div class="d">${meta.genes[k] ? meta.genes[k].doc : ""}</div><canvas id="trc-${k}"></canvas></div>`).join("");
+  run.gene_names.forEach((n, k) => {
+    const def = meta.genes[k] || { min: 0, max: 2 };
+    const vals = run.G.map((g) => g.I.reduce((a, i) => a + i[IX.gene + k], 0) / g.I.length);
+    const band = run.G.map((g) => { const v = g.I.map((i) => i[IX.gene + k]); return [quant(v, 0.1), quant(v, 0.9)]; });
+    const a = vals[0], b = vals[vals.length - 1], span = def.max - def.min;
+    $("trv-" + k).textContent = `${a.toFixed(2)} → ${b.toFixed(2)}`;
+    if (b - a > 0.12 * span) $("tr-" + k).classList.add("up"); else if (a - b > 0.12 * span) $("tr-" + k).classList.add("down");
+    spark($("trc-" + k), [{ vals, band, color: b - a > 0.12 * span ? "#c9d97a" : a - b > 0.12 * span ? "#e8705f" : "#9fb0bb" }], def.min, def.max);
+  });
+}
+function drawBehaviour() {
+  const run = evoRun, el = $("evo-behav"), G = run.G, mn = run.moment_names;
+  const iname = run.intent_names;
+  const meanOf = (f) => G.map((g) => g.I.reduce((a, i) => a + f(i), 0) / g.I.length);
+  const cards = [];
+  const MDOC = { "post-up": "a small cell sits on a hazard within a giant's reach for 1.5 s+", "lure": "a giant shatters on a hazard chasing a cell sitting by it", "gun hit": "a hazard budded at a giant shatters it",
+    "kingmaking": "after a gun hit, a third party eats more of the giant than the shooter", "betrayal": "eats the giant it was shadowing, or kin it travelled with", "regicide": "the largest cell is killed outright" };
+  mn.forEach((n, k) => cards.push({ t: n, d: MDOC[n] || "", unit: "/game", series: [{ vals: G.map((g) => g.mr[k]), color: "#c9d97a" }] }));
+  cards.push({ t: "kin eating kin", d: "share of all cell-eating (solid) vs. blind eating (dashed)", unit: "%", pct: true, series: [{ vals: G.map((g) => g.ke), color: "#e58fc0" }, { vals: G.map((g) => g.kx), color: "#9aa3ad", dash: true, width: 1 }] });
+  for (const n of ["shadow", "shelter", "bait", "gun", "hunt", "flee", "graze", "wander"]) {
+    const k = iname.indexOf(n); if (k < 0) continue;
+    cards.push({ t: `time spent: ${n}`, d: "share of decisions with this as the dominant drive", unit: "%", pct: true, series: [{ vals: meanOf((i) => i[IX.intent + k]), color: INTENT_COLORS[k] }] });
+  }
+  cards.push({ t: "kills", d: "cells finished off per agent per game", unit: "", series: [{ vals: meanOf((i) => i[IX.kills]), color: "#e8705f" }] });
+  cards.push({ t: "deaths", d: "times eaten per agent per game", unit: "", series: [{ vals: meanOf((i) => i[IX.deaths]), color: "#9aa3ad" }] });
+  el.innerHTML = cards.map((c, k) => `<div class="sm"><div class="t"><b>${c.t}</b><span id="bv-${k}"></span></div><div class="d">${c.d}</div><canvas id="bc-${k}"></canvas></div>`).join("");
+  cards.forEach((c, k) => {
+    const all = c.series.flatMap((s) => s.vals), hi = Math.max(1e-6, ...all) * 1.08;
+    const f = (v) => c.pct ? `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : v.toFixed(v < 10 ? 1 : 0);
+    const v = c.series[0].vals, sm = (a, b) => a.slice(a.length * b[0] | 0, Math.max(1, a.length * b[1] | 0)).reduce((x, y, _, arr) => x + y / arr.length, 0);
+    $("bv-" + k).textContent = `${f(sm(v, [0, 0.05]))} → ${f(sm(v, [0.9, 1]))}`;
+    spark($("bc-" + k), c.series, 0, hi, { smooth: true });
+  });
+}
+
+// ---- moments
+function momentPicks(run) {
+  const firsts = [], seen = new Set(), seenEvo = new Set();
+  const sorted = [...run.M].sort((a, b) => a.gen - b.gen || a.tick - b.tick);
+  for (const m of sorted) {
+    if (!seen.has(m.kind)) { seen.add(m.kind); firsts.push({ ...m, why: "first in the run" }); }
+    if (m.evolved_trait && !seenEvo.has(m.kind)) { seenEvo.add(m.kind); firsts.push({ ...m, why: `earliest by a genome that evolved it: ${m.evolved_trait}` }); }
+  }
+  const biggest = [];
+  for (const k of run.moment_names) {
+    const late = run.M.filter((m) => m.kind === k && m.gen >= run.gens * 0.5).sort((a, b) => b.mass - a.mass);
+    late.slice(0, 2).forEach((m) => biggest.push({ ...m, why: "biggest stakes, late in the run" }));
+  }
+  return { firsts, biggest, all: sorted };
+}
+function drawMoments() {
+  const run = evoRun, P = momentPicks(run);
+  const kinds = run.moment_names.filter((k) => run.M.some((m) => m.kind === k));
+  const chips = [["firsts", "firsts"], ["biggest", "biggest"], ...kinds.map((k) => [k, k])];
+  $("evo-chips").innerHTML = chips.map(([v, l]) => `<button data-v="${v}" class="${v === momentFilter ? "on" : ""}">${l}</button>`).join("");
+  $("evo-chips").onclick = (e) => { const b = e.target.closest("button"); if (b) { momentFilter = b.dataset.v; drawMoments(); } };
+  let list = momentFilter === "firsts" ? P.firsts : momentFilter === "biggest" ? P.biggest : P.all.filter((m) => m.kind === momentFilter).slice(-24).reverse();
+  $("evo-moments").innerHTML = list.length ? list.map((m, k) => `<div class="mo"><div class="k"><em>${m.kind}</em><span>gen ${m.gen} · game ${m.game} · ${mmss(m.tick / meta.tps)}</span></div>
+    <p>${m.text.replace(/#\d+/g, "")}${m.evolved_trait ? '<span class="tag">evolved trait</span>' : ""}</p>${m.why ? `<div class="k"><span>${m.why}</span></div>` : ""}
+    <button data-k="${k}">Watch</button></div>`).join("") : "<p class='muted'>None of this kind in this run.</p>";
+  $("evo-moments").onclick = (e) => { const b = e.target.closest("button"); if (b) watch(run, list[+b.dataset.k]); };
+}
+
+function loadRoster(run, gen, game) {
+  const g = run.G[gen], I = g.I;
+  const nums = [run.rules.length, ...run.rules, I.length];
+  for (const i of I) nums.push(i[IX.clan], ...i.slice(IX.gene, IX.gene + run.gene_names.length));
+  nums.push(I.length, ...I.map((_, k) => k));
+  const pf = X.in_f64(nums.length); new Float64Array(mem.buffer, pf, nums.length).set(nums);
+  const names = new TextEncoder().encode(I.map((i) => indName(run, i)).join("\n"));
+  const pt = X.in_txt(names.length); new Uint8Array(mem.buffer, pt, names.length).set(names);
+  X.init_custom(g.s[game]);
+  founder = I.map((i) => i[IX.fam]); marks = []; follow = -1; inspBuiltFor = -2;
+  meta = JSON.parse(text(X.meta())); buildLegend(); buildRules(); parse(); fit();
+}
+let bannerMoment = null;
+function watch(run, m) {
+  openEvo(false);
+  loadRoster(run, m.gen, m.game);
+  const start = Math.max(0, m.tick - 4 * meta.tps);
+  X.step(start); parse();
+  follow = m.a >= 0 ? m.a : -1; marks = [m.b, m.c].filter((v) => v !== undefined && v !== null && v >= 0);
+  userZoom = false; if (!playing) togglePlay(); $("speed").value = "1";
+  bannerMoment = { run, m, start };
+  $("banner-t").innerHTML = `${m.text ? "★ " + m.text.replace(/#(\d+)/g, " <small style='display:inline'>#$1</small>") : "Replaying a moment"}<small>${run.title} · generation ${m.gen} · game ${m.game} (seed ${run.G[m.gen].s[m.game]}) · at ${mmss(m.tick / meta.tps)}</small>`;
+  $("banner").classList.add("on");
+  $("banner-replay").onclick = () => { X.seek(start); parse(); follow = m.a; if (!playing) togglePlay(); };
+  try { history.replaceState(null, "", `#run=${run.name}&gen=${m.gen}&game=${m.game}&t=${m.tick}&a=${m.a}&b=${m.b}`); } catch (e) {}
+}
+function hideBanner() { $("banner").classList.remove("on"); marks = []; }
+
 (async () => {
   await load();
   X.init(1, 2); meta = JSON.parse(text(X.meta()));
-  $("legend").innerHTML = meta.strategies.map((s, k) => `<span><i class="dot" style="background:${STRAT_COLORS[k]}"></i>${s.name}</span>`).join("");
   $("intents").innerHTML = meta.intents.map((n, k) => `<span><i style="background:${INTENT_COLORS[k]}"></i>${n}</span>`).join("") +
     `<span>solid = where it is steering · dashed = what it is reacting to</span>`;
-  const m = location.hash.match(/seed-(\d+)/); if (m) $("seed").value = m[1];
+  const startHash = location.hash;
+  const m = startHash.match(/seed-(\d+)/); if (m) $("seed").value = m[1];
   resize();
   newGame(+$("seed").value | 0, +$("np").value | 0);
+  evoInit(startHash);
   requestAnimationFrame(frame);
 })();
 </script>

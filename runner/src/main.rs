@@ -21,6 +21,7 @@ struct Opts {
     hash: Option<u64>,
     only: Option<Vec<String>>,
     genes: Vec<(String, usize, f64)>,
+    roster: Vec<String>,
 }
 
 fn parse() -> Opts {
@@ -35,6 +36,7 @@ fn parse() -> Opts {
         hash: None,
         only: None,
         genes: Vec::new(),
+        roster: Vec::new(),
     };
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -48,6 +50,7 @@ fn parse() -> Opts {
             "--threads" => o.threads = v.parse().expect("--threads N"),
             "--out" => o.out = PathBuf::from(v),
             "--hash" => o.hash = Some(v.parse().expect("--hash SEED")),
+            "--roster" => o.roster.push(v),
             "--only" => o.only = Some(v.split(',').map(|s| s.trim().to_string()).collect()),
             "--gene" => {
                 // --gene hermit.shelter=0  (edit one strategy's genome for this run)
@@ -64,7 +67,7 @@ fn parse() -> Opts {
                 }
             }
             "-h" | "--help" => {
-                println!("options: --games N --ticks N --players N --seed N --threads N --out DIR --rule name=value (repeat) --only grazer,hunter --gene hermit.shelter=0 --hash SEED");
+                println!("options: --games N --ticks N --players N --seed N --threads N --out DIR --rule name=value (repeat) --only grazer,hunter --gene hermit.shelter=0 --roster file.json (repeatable: add evolved strategies, e.g. results/evolve/power/champions.json; `presets` adds the seven presets) --hash SEED");
                 println!("rules:");
                 for d in RULE_DEFS {
                     println!("  {:15} {}", d.name, d.doc);
@@ -78,8 +81,38 @@ fn parse() -> Opts {
     o
 }
 
+#[derive(serde::Deserialize)]
+struct RosterEntry {
+    name: String,
+    genome: Vec<f64>,
+    #[serde(default)]
+    take: Option<bool>,
+}
+
 fn strategies(o: &Opts) -> Vec<Strategy> {
-    let mut all = presets();
+    let mut all = if o.roster.is_empty() { presets() } else { Vec::new() };
+    for path in &o.roster {
+        if path == "presets" {
+            all.extend(presets());
+            continue;
+        }
+        // a roster file is a JSON list of {name, genome}; "path:N" takes only the first N
+        let (path, n) = match path.rsplit_once(':') {
+            Some((p, n)) if n.parse::<usize>().is_ok() => (p, n.parse().unwrap()),
+            _ => (path.as_str(), usize::MAX),
+        };
+        let txt = fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let list: Vec<RosterEntry> = serde_json::from_str(&txt).unwrap_or_else(|e| panic!("{path}: {e}"));
+        for r in list.into_iter().filter(|r| r.take != Some(false)).take(n) {
+            let mut g = [0.0; GENES];
+            g.copy_from_slice(&r.genome[..GENES]);
+            all.push(Strategy { name: r.name, genome: Genome(g).clamped(), family: 0 });
+        }
+    }
+    // in a tournament every strategy is its own family (kin = same strategy)
+    for (i, s) in all.iter_mut().enumerate() {
+        s.family = i;
+    }
     for (s, gi, v) in &o.genes {
         let st = all.iter_mut().find(|x| &x.name == s).unwrap_or_else(|| panic!("no strategy {s}"));
         st.genome.0[*gi] = *v;

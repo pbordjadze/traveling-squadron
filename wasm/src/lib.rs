@@ -3,6 +3,7 @@
 //! forth and branch history by steering. Plain C ABI, no bindgen: the page
 //! reads flat f32 buffers straight out of linear memory.
 
+use motes::moments::Observer;
 use motes::*;
 use std::cell::RefCell;
 
@@ -17,7 +18,8 @@ struct Session {
     seed: u64,
     players: usize,
     world: World,
-    snaps: Vec<World>, // snaps[k].tick == k * SNAP_EVERY
+    obs: Observer,
+    snaps: Vec<(World, Observer)>, // snaps[k].0.tick == k * SNAP_EVERY
     cmds: Vec<Logged>,
     head: u64, // furthest tick ever computed on this branch
     out: Vec<f32>,
@@ -27,6 +29,8 @@ struct Session {
 
 thread_local! {
     static S: RefCell<Option<Session>> = RefCell::new(None);
+    static IN_F64: RefCell<Vec<f64>> = RefCell::new(Vec::new());
+    static IN_TXT: RefCell<Vec<u8>> = RefCell::new(Vec::new());
 }
 
 fn with<R>(f: impl FnOnce(&mut Session) -> R) -> R {
@@ -37,12 +41,14 @@ impl Session {
     fn advance(&mut self) {
         let t = self.world.tick;
         if t % SNAP_EVERY == 0 && self.snaps.len() as u64 == t / SNAP_EVERY {
-            self.snaps.push(self.world.clone());
+            self.snaps.push((self.world.clone(), self.obs.clone()));
         }
         for l in self.cmds.iter().filter(|l| l.tick == t) {
             self.world.apply(&l.cmd);
         }
         self.world.step();
+        let before = self.obs.moments.len();
+        self.obs.observe(&self.world);
         if self.world.tick > self.head {
             self.head = self.world.tick;
             let names = &self.world.strategies;
@@ -58,6 +64,11 @@ impl Session {
                 };
                 self.feed.push((e.tick, line));
             }
+            let pl = &self.world.players;
+            let name = |i: usize| if i < pl.len() { format!("{}#{}", names[pl[i].strat].name, i) } else { "?".into() };
+            for m in &self.obs.moments[before..] {
+                self.feed.push((m.tick, format!("★ {}", Observer::describe(m, &name))));
+            }
         }
     }
 
@@ -65,7 +76,8 @@ impl Session {
         let tick = tick.min(self.head);
         if tick < self.world.tick || tick > self.world.tick + SNAP_EVERY {
             let k = ((tick / SNAP_EVERY) as usize).min(self.snaps.len().saturating_sub(1));
-            self.world = self.snaps[k].clone();
+            self.world = self.snaps[k].0.clone();
+            self.obs = self.snaps[k].1.clone();
         }
         while self.world.tick < tick {
             self.advance();
@@ -87,13 +99,13 @@ impl Session {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn init(seed: u32, players: u32) {
-    let w = standard_game(seed as u64, players as usize, Rules::default(), presets());
+fn start(seed: u64, w: World) {
+    let players = w.players.len();
     S.with(|s| {
         *s.borrow_mut() = Some(Session {
-            seed: seed as u64,
-            players: players as usize,
+            seed,
+            players,
+            obs: Observer::new(players),
             world: w,
             snaps: Vec::new(),
             cmds: Vec::new(),
@@ -103,6 +115,65 @@ pub extern "C" fn init(seed: u32, players: u32) {
             feed: Vec::new(),
         })
     });
+}
+
+#[no_mangle]
+pub extern "C" fn init(seed: u32, players: u32) {
+    start(seed as u64, standard_game(seed as u64, players as usize, Rules::default(), presets()));
+}
+
+/// Scratch input buffers the page fills before `init_custom`.
+#[no_mangle]
+pub extern "C" fn in_f64(n: u32) -> *mut f64 {
+    IN_F64.with(|b| {
+        let mut b = b.borrow_mut();
+        b.clear();
+        b.resize(n as usize, 0.0);
+        b.as_mut_ptr()
+    })
+}
+#[no_mangle]
+pub extern "C" fn in_txt(n: u32) -> *mut u8 {
+    IN_TXT.with(|b| {
+        let mut b = b.borrow_mut();
+        b.clear();
+        b.resize(n as usize, 0);
+        b.as_mut_ptr()
+    })
+}
+
+/// A game with any roster (e.g. one generation of an evolution run).
+/// in_f64: [nrules, rules.., nstrat, (family, genes x GENES) x nstrat, nplayers, assignment..]
+/// in_txt: strategy names joined by newlines.
+#[no_mangle]
+pub extern "C" fn init_custom(seed: u32) {
+    let v = IN_F64.with(|b| b.borrow().clone());
+    let names: Vec<String> = IN_TXT.with(|b| String::from_utf8_lossy(&b.borrow()).split('\n').map(|s| s.to_string()).collect());
+    let mut k = 0usize;
+    let mut next = || {
+        let x = v.get(k).copied().unwrap_or(0.0);
+        k += 1;
+        x
+    };
+    let mut rules = Rules::default();
+    let nr = next() as usize;
+    for i in 0..nr {
+        let x = next();
+        rules.set(i, x);
+    }
+    let ns = next() as usize;
+    let mut strategies = Vec::with_capacity(ns);
+    for i in 0..ns {
+        let family = next() as usize;
+        let mut g = [0.0; GENES];
+        for gv in g.iter_mut() {
+            *gv = next();
+        }
+        strategies.push(Strategy { name: names.get(i).cloned().unwrap_or_else(|| format!("s{i}")), genome: Genome(g).clamped(), family });
+    }
+    let np = next() as usize;
+    let assignment: Vec<usize> = (0..np).map(|_| (next() as usize).min(ns.saturating_sub(1))).collect();
+    start(seed as u64, World::new(seed as u64, rules, strategies, &assignment));
 }
 
 #[no_mangle]
@@ -273,7 +344,7 @@ pub extern "C" fn meta() -> *const u8 {
             .world
             .strategies
             .iter()
-            .map(|st| format!("{{\"name\":\"{}\",\"genome\":[{}]}}", st.name, st.genome.0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(",")))
+            .map(|st| format!("{{\"name\":\"{}\",\"family\":{},\"genome\":[{}]}}", st.name, st.family, st.genome.0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(",")))
             .collect::<Vec<_>>()
             .join(",");
         let intents = INTENT_NAMES.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(",");

@@ -134,7 +134,7 @@ pub fn think(w: &World, pid: usize, rng: &mut Rng, heading: &mut (f64, f64)) -> 
                 shadow_target = Some(ci);
             }
         } else if mm >= er * g[RISK] * c.mass && dc < vision {
-            let kin = w.players[c.owner].strat == p.strat;
+            let kin = w.players[c.owner].family == p.family;
             let mut val = c.mass / (edge + 60.0) * if kin { 1.0 - g[KIN] } else { 1.0 };
             if can_shatter {
                 // prey hiding on a thorn is guarded
@@ -149,7 +149,7 @@ pub fn think(w: &World, pid: usize, rng: &mut Rng, heading: &mut (f64, f64)) -> 
                 best_prey = Some((val, ci));
             }
         }
-        if c.mass >= r.thorn_pop && c.mass > mm && w.players[c.owner].strat != p.strat {
+        if c.mass >= r.thorn_pop && c.mass > mm && w.players[c.owner].family != p.family {
             if big_nearby.map_or(true, |(d, _)| dc < d) {
                 big_nearby = Some((dc, ci));
             }
