@@ -1,0 +1,396 @@
+<title>Motes Observatory</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: an observation console. The arena is the specimen under the scope (left, full height);
+   the instrument panel (right) holds inspector, ranks, strategy share and controls. Deliberately dark-only. */
+:root {
+  --bg: #0d1216; --stage: #091014; --panel: #121a20; --line: #22303a; --fg: #d6dee3; --dim: #7d8c96;
+  --accent: #c9d97a; --warn: #e8705f;
+  --ui: "Instrument Sans", system-ui, sans-serif; --mono: "Martian Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 var(--ui); overflow: hidden; }
+#app { display: flex; height: 100%; padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+#stage { position: relative; flex: 1; min-width: 0; background: var(--stage); }
+#cv { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+#bar { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); padding: 8px 10px; border-radius: 6px; }
+#scrub { flex: 1; min-width: 160px; accent-color: var(--accent); }
+.clock { font: 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--dim); white-space: nowrap; }
+#top { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; right: 12px; pointer-events: none; }
+#top > * { pointer-events: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; border-right: 1px solid var(--line); background: transparent; }
+.seg button:last-child { border-right: 0; }
+button, select, input[type=number] { font: 12px var(--ui); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 5px 9px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button.on, .seg button.on { background: var(--accent); color: #11160a; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type=number] { width: 74px; font-family: var(--mono); }
+#hint { position: absolute; top: 52px; left: 12px; font-size: 12px; color: var(--dim); pointer-events: none; }
+aside { width: 340px; flex: none; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 18px; }
+h2 { font: 600 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 0 0 8px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; }
+.kv b { font: 400 12px var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.who { display: flex; align-items: center; gap: 8px; font: 600 15px var(--ui); margin-bottom: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.gene { display: grid; grid-template-columns: 82px 1fr 34px; gap: 6px; align-items: center; font-size: 11.5px; }
+.gene input { width: 100%; accent-color: var(--accent); }
+.gene span:last-child { font: 11px var(--mono); text-align: right; color: var(--dim); }
+.genes { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; }
+ol.ranks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+ol.ranks li { display: grid; grid-template-columns: 16px 10px 1fr auto auto; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+ol.ranks li:hover, ol.ranks li.sel { background: var(--line); }
+ol.ranks .n { font: 11px var(--mono); color: var(--dim); }
+ol.ranks .m { font: 11px var(--mono); font-variant-numeric: tabular-nums; }
+ol.ranks .i { font-size: 11px; color: var(--dim); }
+#share { width: 100%; height: 120px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; margin-top: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+#feed { font: 11px/1.6 var(--mono); color: var(--dim); max-height: 170px; overflow-y: auto; white-space: pre-wrap; }
+#feed .t { color: var(--fg); opacity: .5; }
+details summary { cursor: pointer; font: 600 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.rule { display: grid; grid-template-columns: 1fr 64px; gap: 4px 8px; align-items: center; font-size: 11.5px; margin-top: 6px; }
+.rule small { grid-column: 1 / -1; color: var(--dim); font-size: 10.5px; margin-top: -3px; }
+.muted { color: var(--dim); font-size: 12px; }
+.intents { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 11px; color: var(--dim); }
+.intents i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 4px; }
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  #app { flex-direction: column; height: auto; }
+  #stage { height: 72vh; flex: none; }
+  aside { width: auto; border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+</style>
+
+<div id="app">
+  <div id="stage">
+    <canvas id="cv" aria-label="Arena seen from above"></canvas>
+    <div id="top">
+      <div class="seg" role="group" aria-label="Tool">
+        <button id="t-select" class="on">Select</button>
+        <button id="t-drop">Drop hazard</button>
+        <button id="t-remove">Remove hazard</button>
+      </div>
+      <div class="seg" role="group" aria-label="Intent lines">
+        <button id="l-all" class="on">Intent: all</button>
+        <button id="l-sel">followed</button>
+        <button id="l-none">off</button>
+      </div>
+      <label class="muted">seed <input id="seed" type="number" value="8" min="0"></label>
+      <label class="muted">agents <input id="np" type="number" value="42" min="2" max="200"></label>
+      <button id="new">New game</button>
+      <button id="fit">Whole arena</button>
+    </div>
+    <div id="hint"></div>
+    <div id="bar">
+      <button id="play" class="on" aria-label="Play or pause (space)">Pause</button>
+      <select id="speed" aria-label="Speed">
+        <option value="0.25">¼×</option><option value="1" selected>1×</option><option value="2">2×</option>
+        <option value="4">4×</option><option value="8">8×</option><option value="20">20×</option>
+      </select>
+      <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Scrub time">
+      <span class="clock" id="clock">0:00</span>
+    </div>
+  </div>
+  <aside>
+    <section id="insp"><h2>Followed agent</h2><p class="muted">Click a cell to follow it. You can change its strategy or any of its drives; the change is recorded at the current moment, so scrubbing back before it and steering again starts a new branch of history.</p></section>
+    <section><h2>Largest now</h2><ol class="ranks" id="ranks"></ol></section>
+    <section><h2>Share of all mass, by strategy</h2><canvas id="share"></canvas><div class="legend" id="legend"></div></section>
+    <section><h2>Intent lines</h2><div class="intents" id="intents"></div></section>
+    <section><h2>Politics feed</h2><div id="feed"></div></section>
+    <section><details><summary>Arena rules</summary><div id="rules"></div></details></section>
+    <section class="muted">Same seed, same game: this viewer runs the identical simulation the headless runner uses (compiled to WebAssembly). Keys: space play/pause, ← → step back/forward one second, F follow/unfollow. Link a game with <span style="font-family:var(--mono)">#seed-N</span>.</section>
+  </aside>
+</div>
+
+<script>
+const WASM_B64 = "/*WASM_BASE64*/";
+const STRAT_COLORS = ["#7fc8a9", "#e8705f", "#d9a441", "#6fa8dc", "#b48ee0", "#e58fc0", "#9aa3ad"];
+const INTENT_COLORS = ["#7fc8a9", "#e8705f", "#f2d16b", "#d9a441", "#62d3e0", "#b48ee0", "#ffffff", "#5d6a73", "#ff3b2f"];
+const $ = (id) => document.getElementById(id);
+let X, mem, meta;
+const enc = new TextDecoder();
+
+async function load() {
+  let bytes;
+  if (WASM_B64.startsWith("/*")) bytes = await (await fetch("motes.wasm")).arrayBuffer();
+  else bytes = Uint8Array.from(atob(WASM_B64), (c) => c.charCodeAt(0));
+  const { instance } = await WebAssembly.instantiate(bytes, {});
+  X = instance.exports; mem = X.memory;
+}
+const text = (ptr) => enc.decode(new Uint8Array(mem.buffer, ptr, X.text_len()));
+
+// ---------- state
+let F = null;          // parsed frame
+let playing = true, acc = 0, tool = "select", lines = "all";
+let follow = -1, cam = { x: 1700, y: 1700, s: 0.2 }, userZoom = false, dragging = null;
+const cv = $("cv"), ctx = cv.getContext("2d");
+
+function parse() {
+  const p = X.frame(), n = X.frame_len();
+  const b = new Float32Array(mem.buffer, p, n);
+  let o = 10;
+  const h = { tick: b[0], head: b[1], nc: b[2], np: b[3], nb: b[4], nt: b[5], na: b[6], ns: b[7], nstrat: b[8], arena: b[9] };
+  h.b = b; h.cells = o; o += h.nc * 5; h.pel = o; o += h.np * 3; h.blobs = o; o += h.nb * 3;
+  h.thorns = o; o += h.nt * 4; h.players = o; o += h.na * 16; h.share = o;
+  h.P = (i) => { const q = h.players + i * 16; return { strat: b[q], alive: b[q + 1], mass: b[q + 2], pieces: b[q + 3], cx: b[q + 4], cy: b[q + 5],
+    tx: b[q + 6], ty: b[q + 7], intent: b[q + 8], fx: b[q + 9], fy: b[q + 10], focus: b[q + 11], kills: b[q + 12], life: b[q + 13], top: b[q + 14] }; };
+  F = h;
+}
+
+function newGame(seed, np) {
+  X.init(seed, np); follow = -1; userZoom = false;
+  try { history.replaceState(null, "", "#seed-" + seed); } catch (e) {}
+  buildRules(); parse(); fit();
+}
+
+// ---------- camera
+function resize() {
+  const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+  cv.width = r.width * d; cv.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+function fit() { const r = cv.getBoundingClientRect(); const a = F ? F.arena : 3400; cam = { x: a / 2, y: a / 2, s: Math.min(r.width, r.height - 60) / (a * 1.04) }; userZoom = false; }
+const toWorld = (sx, sy) => { const r = cv.getBoundingClientRect(); return [(sx - r.width / 2) / cam.s + cam.x, (sy - r.height / 2) / cam.s + cam.y]; };
+
+// ---------- drawing
+function thornPath(x, y, r, spikes) {
+  ctx.beginPath();
+  for (let i = 0; i <= spikes * 2; i++) {
+    const a = (i / (spikes * 2)) * Math.PI * 2, rr = i % 2 ? r * 0.82 : r * 1.12;
+    const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+function draw() {
+  const r = cv.getBoundingClientRect(), W = r.width, H = r.height, b = F.b, s = cam.s;
+  ctx.fillStyle = "#091014"; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-cam.x, -cam.y);
+  // dish + grid
+  ctx.fillStyle = "#0e171d"; ctx.fillRect(0, 0, F.arena, F.arena);
+  ctx.strokeStyle = "#16222a"; ctx.lineWidth = 1 / s;
+  ctx.beginPath();
+  for (let g = 0; g <= F.arena; g += 200) { ctx.moveTo(g, 0); ctx.lineTo(g, F.arena); ctx.moveTo(0, g); ctx.lineTo(F.arena, g); }
+  ctx.stroke();
+  ctx.strokeStyle = "#2c3d48"; ctx.lineWidth = 3 / s; ctx.strokeRect(0, 0, F.arena, F.arena);
+  // pellets
+  ctx.fillStyle = "#3f5a52";
+  for (let i = 0; i < F.np; i++) { const q = F.pel + i * 3, rr = b[q + 2] > 1 ? 5 : 3; ctx.fillRect(b[q] - rr / 2, b[q + 1] - rr / 2, rr, rr); }
+  // blobs
+  ctx.fillStyle = "#a9b7a0";
+  for (let i = 0; i < F.nb; i++) { const q = F.blobs + i * 3; ctx.beginPath(); ctx.arc(b[q], b[q + 1], b[q + 2], 0, 7); ctx.fill(); }
+  // cells (small first), thorns drawn over cells smaller than themselves
+  const order = []; for (let i = 0; i < F.nc; i++) order.push(i);
+  order.sort((a, c) => b[F.cells + a * 5 + 2] - b[F.cells + c * 5 + 2]);
+  const thornR = F.nt ? b[F.thorns + 2] : 0;
+  let thornsDone = false;
+  const drawThorns = () => {
+    for (let i = 0; i < F.nt; i++) {
+      const q = F.thorns + i * 4;
+      thornPath(b[q], b[q + 1], b[q + 2], 18);
+      ctx.fillStyle = "rgba(201,217,122,0.16)"; ctx.fill();
+      ctx.strokeStyle = b[q + 3] ? "#ffffff" : "#c9d97a"; ctx.lineWidth = 2 / s + 1; ctx.stroke();
+    }
+    thornsDone = true;
+  };
+  for (const i of order) {
+    const q = F.cells + i * 5, x = b[q], y = b[q + 1], rr = b[q + 2], owner = b[q + 3], st = b[q + 4];
+    if (!thornsDone && rr > thornR) drawThorns();
+    const col = STRAT_COLORS[st % STRAT_COLORS.length];
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, 7);
+    ctx.fillStyle = col + "cc"; ctx.fill();
+    ctx.lineWidth = Math.max(1.5 / s, rr * 0.07); ctx.strokeStyle = col; ctx.stroke();
+    if (owner === follow) { ctx.lineWidth = 2.5 / s; ctx.strokeStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x, y, rr + 5 / s, 0, 7); ctx.stroke(); }
+    if (rr * s > 13) {
+      ctx.fillStyle = "#0b1115"; ctx.font = `600 ${Math.max(10 / s, rr * 0.38)}px "Martian Mono", monospace`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(owner, x, y);
+    }
+  }
+  if (!thornsDone) drawThorns();
+  // intent lines
+  if (lines !== "none") {
+    for (let i = 0; i < F.na; i++) {
+      if (lines === "sel" && i !== follow) continue;
+      const p = F.P(i); if (!p.alive) continue;
+      const c = INTENT_COLORS[p.intent];
+      const strong = i === follow;
+      ctx.globalAlpha = strong ? 0.9 : 0.28; ctx.strokeStyle = c; ctx.lineWidth = (strong ? 2 : 1.2) / s;
+      ctx.beginPath(); ctx.moveTo(p.cx, p.cy); ctx.lineTo(p.tx, p.ty); ctx.stroke();
+      if (p.focus) { ctx.setLineDash([6 / s, 6 / s]); ctx.beginPath(); ctx.moveTo(p.cx, p.cy); ctx.lineTo(p.fx, p.fy); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+  // clock
+  const t = F.tick / meta.tps, hd = F.head / meta.tps;
+  $("clock").textContent = `${mmss(t)} / ${mmss(hd)}  ·  tick ${F.tick}`;
+  $("scrub").max = F.head; if (!scrubbing) $("scrub").value = F.tick;
+}
+const mmss = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+
+function drawShare() {
+  const c = $("share"), d = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w * d) { c.width = w * d; c.height = h * d; }
+  const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, w, h);
+  const ns = F.nstrat, rows = F.ns, b = F.b;
+  if (rows < 2) return;
+  const cur = Math.min(rows - 1, Math.floor(F.tick / meta.share_every));
+  const step = Math.max(1, Math.floor(rows / w));
+  const xs = (k) => (k / (rows - 1)) * w;
+  const base = new Float32Array(Math.ceil(rows / step) + 1);
+  for (let s = 0; s < ns; s++) {
+    g.beginPath(); const top = [];
+    let j = 0;
+    for (let k = 0; k < rows; k += step, j++) {
+      let tot = 0; for (let u = 0; u < ns; u++) tot += b[F.share + k * ns + u];
+      const v = tot > 0 ? b[F.share + k * ns + s] / tot : 0;
+      top.push([xs(k), base[j], base[j] + v]); base[j] += v;
+    }
+    top.forEach(([x, , y1], i) => i ? g.lineTo(x, h - y1 * h) : g.moveTo(x, h - y1 * h));
+    for (let i = top.length - 1; i >= 0; i--) g.lineTo(top[i][0], h - top[i][1] * h);
+    g.closePath(); g.fillStyle = STRAT_COLORS[s % STRAT_COLORS.length]; g.globalAlpha = 0.85; g.fill(); g.globalAlpha = 1;
+  }
+  g.strokeStyle = "#ffffff"; g.lineWidth = 1; g.beginPath(); g.moveTo(xs(cur), 0); g.lineTo(xs(cur), h); g.stroke();
+}
+
+// ---------- panel
+let lastPanel = 0;
+function panel() {
+  // ranks
+  const alive = []; for (let i = 0; i < F.na; i++) { const p = F.P(i); if (p.alive) alive.push([i, p]); }
+  alive.sort((a, c) => c[1].mass - a[1].mass);
+  $("ranks").innerHTML = alive.slice(0, 10).map(([i, p], k) =>
+    `<li data-p="${i}" class="${i === follow ? "sel" : ""}"><span class="n">${k + 1}</span><span class="dot" style="background:${STRAT_COLORS[p.strat]}"></span>` +
+    `<span>${meta.strategies[p.strat].name} #${i}</span><span class="i">${meta.intents[p.intent]}</span><span class="m">${Math.round(p.mass)}</span></li>`).join("");
+  // feed
+  const lines_ = text(X.feed(40)).split("\n").filter(Boolean);
+  $("feed").innerHTML = lines_.reverse().map((l) => { const [t, m] = l.split("\t"); return `<span class="t">${mmss(t / meta.tps)}</span> ${m}`; }).join("\n");
+  inspector();
+}
+let inspBuiltFor = -2;
+function inspector() {
+  const el = $("insp");
+  if (follow < 0) { if (inspBuiltFor !== -1) { inspBuiltFor = -1; } return; }
+  const p = F.P(follow);
+  if (inspBuiltFor !== follow) {
+    inspBuiltFor = follow;
+    el.innerHTML = `<h2>Followed agent</h2><div class="who"><span class="dot" id="i-dot"></span><span id="i-name"></span></div>
+      <div class="kv"><span>doing</span><b id="i-intent"></b><span>mass</span><b id="i-mass"></b><span>pieces</span><b id="i-pieces"></b>
+      <span>alive for</span><b id="i-life"></b><span>kills this life</span><b id="i-kills"></b><span>time as #1</span><b id="i-top"></b></div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><label class="muted" for="i-strat">strategy</label>
+      <select id="i-strat">${meta.strategies.map((s, k) => `<option value="${k}">${s.name}</option>`).join("")}</select>
+      <button id="i-unfollow">Unfollow</button></div>
+      <div class="genes">${meta.genes.map((g, k) => `<label class="gene" title="${g.doc}"><span>${g.name}</span>
+        <input type="range" id="g-${k}" min="${g.min}" max="${g.max}" step="0.05"><span id="gv-${k}"></span></label>`).join("")}</div>`;
+    $("i-strat").onchange = (e) => { X.cmd_set_strategy(follow, +e.target.value); X.step(1); refreshGenes(true); };
+    $("i-unfollow").onclick = () => { follow = -1; inspBuiltFor = -2; el.innerHTML = `<h2>Followed agent</h2><p class="muted">Click a cell to follow it.</p>`; };
+    meta.genes.forEach((g, k) => { $("g-" + k).oninput = (e) => { X.cmd_set_gene(follow, k, +e.target.value); X.step(1); $("gv-" + k).textContent = (+e.target.value).toFixed(2); }; });
+    refreshGenes(true);
+  }
+  $("i-dot").style.background = STRAT_COLORS[p.strat];
+  $("i-name").textContent = `${meta.strategies[p.strat].name} #${follow}`;
+  $("i-intent").textContent = p.alive ? meta.intents[p.intent] : "waiting to respawn";
+  $("i-intent").style.color = INTENT_COLORS[p.intent];
+  $("i-mass").textContent = Math.round(p.mass);
+  $("i-pieces").textContent = p.pieces;
+  $("i-life").textContent = mmss(p.life);
+  $("i-kills").textContent = p.kills;
+  $("i-top").textContent = mmss(p.top);
+  if (document.activeElement !== $("i-strat")) $("i-strat").value = p.strat;
+  refreshGenes(false);
+}
+function refreshGenes(force) {
+  meta.genes.forEach((g, k) => {
+    const inp = $("g-" + k); if (!inp || (!force && document.activeElement === inp)) return;
+    const v = X.gene_get(follow, k); inp.value = v; $("gv-" + k).textContent = v.toFixed(2);
+  });
+}
+function buildRules() {
+  $("rules").innerHTML = meta.rules.map((r, k) => `<label class="rule"><span>${r.name.replace(/_/g, " ")}</span>
+    <input type="number" id="r-${k}" min="${r.min}" max="${r.max}" step="any" value="${+X.rule_get(k).toFixed(4)}"><small>${r.doc}</small></label>`).join("");
+  meta.rules.forEach((r, k) => { $("r-" + k).onchange = (e) => { X.cmd_set_rule(k, +e.target.value); X.step(1); e.target.value = +X.rule_get(k).toFixed(4); }; });
+}
+
+// ---------- input
+let scrubbing = false;
+$("scrub").addEventListener("input", (e) => { scrubbing = true; X.seek(+e.target.value); parse(); });
+$("scrub").addEventListener("change", () => { scrubbing = false; });
+$("play").onclick = () => togglePlay();
+function togglePlay() { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; $("play").classList.toggle("on", playing); }
+const tools = { "t-select": "select", "t-drop": "drop", "t-remove": "remove" };
+for (const id in tools) $(id).onclick = () => { tool = tools[id]; for (const j in tools) $(j).classList.toggle("on", j === id);
+  $("hint").textContent = tool === "drop" ? "Click the arena to drop a hazard." : tool === "remove" ? "Click near a hazard to remove it." : ""; };
+const lmodes = { "l-all": "all", "l-sel": "sel", "l-none": "none" };
+for (const id in lmodes) $(id).onclick = () => { lines = lmodes[id]; for (const j in lmodes) $(j).classList.toggle("on", j === id); };
+$("new").onclick = () => newGame(+$("seed").value | 0, Math.max(2, Math.min(200, +$("np").value | 0)));
+$("fit").onclick = () => { follow = -1; fit(); };
+$("ranks").onclick = (e) => { const li = e.target.closest("li"); if (li) { follow = +li.dataset.p; userZoom = false; } };
+
+cv.addEventListener("pointerdown", (e) => { dragging = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - dragging.x, dy = e.clientY - dragging.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) { dragging.moved = true; follow = -1; userZoom = true; }
+  if (dragging.moved) { cam.x = dragging.cx - dx / cam.s; cam.y = dragging.cy - dy / cam.s; }
+});
+cv.addEventListener("pointerup", (e) => {
+  const d = dragging; dragging = null; if (!d || d.moved) return;
+  const r = cv.getBoundingClientRect(); const [wx, wy] = toWorld(e.clientX - r.left, e.clientY - r.top);
+  if (tool === "drop") { X.cmd_drop_thorn(wx, wy); X.step(1); parse(); return; }
+  if (tool === "remove") { X.cmd_remove_thorn(wx, wy); X.step(1); parse(); return; }
+  let best = -1, br = 1e9; const b = F.b;
+  for (let i = 0; i < F.nc; i++) { const q = F.cells + i * 5, dd = Math.hypot(b[q] - wx, b[q + 1] - wy);
+    if (dd < Math.max(b[q + 2], 12 / cam.s) && b[q + 2] < br) { br = b[q + 2]; best = b[q + 3]; } }
+  if (best >= 0) { follow = best; userZoom = false; }
+});
+cv.addEventListener("wheel", (e) => { e.preventDefault(); userZoom = true; cam.s *= Math.exp(-e.deltaY * 0.0015); cam.s = Math.max(0.05, Math.min(6, cam.s)); }, { passive: false });
+addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+  if (e.code === "ArrowLeft") { X.seek(Math.max(0, F.tick - meta.tps)); parse(); }
+  if (e.code === "ArrowRight") { X.seek(F.tick + meta.tps); parse(); }
+  if (e.code === "KeyF") { follow = follow >= 0 ? -1 : (F ? topPlayer() : -1); userZoom = false; }
+});
+function topPlayer() { let k = -1, m = -1; for (let i = 0; i < F.na; i++) { const p = F.P(i); if (p.alive && p.mass > m) { m = p.mass; k = i; } } return k; }
+addEventListener("resize", resize);
+
+// ---------- loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (playing && !scrubbing) {
+    // when viewing the past, play replays the recorded branch; at the head it computes new ticks
+    acc += dt * meta.tps * +$("speed").value;
+    const n = Math.floor(acc); acc -= n;
+    if (n > 0) X.step(n);
+  }
+  parse();
+  if (follow >= 0) {
+    const p = F.P(follow);
+    if (p.alive) {
+      const k = 0.15; cam.x += (p.cx - cam.x) * k; cam.y += (p.cy - cam.y) * k;
+      if (!userZoom) { const r = cv.getBoundingClientRect(); const want = Math.min(r.width, r.height) / (900 + Math.sqrt(p.mass) * 4 * 10); cam.s += (want - cam.s) * 0.05; }
+    }
+  }
+  draw();
+  if (now - lastPanel > 200) { lastPanel = now; panel(); drawShare(); }
+  requestAnimationFrame(frame);
+}
+
+(async () => {
+  await load();
+  X.init(1, 2); meta = JSON.parse(text(X.meta()));
+  $("legend").innerHTML = meta.strategies.map((s, k) => `<span><i class="dot" style="background:${STRAT_COLORS[k]}"></i>${s.name}</span>`).join("");
+  $("intents").innerHTML = meta.intents.map((n, k) => `<span><i style="background:${INTENT_COLORS[k]}"></i>${n}</span>`).join("") +
+    `<span>solid = where it is steering · dashed = what it is reacting to</span>`;
+  const m = location.hash.match(/seed-(\d+)/); if (m) $("seed").value = m[1];
+  resize();
+  newGame(+$("seed").value | 0, +$("np").value | 0);
+  requestAnimationFrame(frame);
+})();
+</script>
